@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= newsItem.title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+    <%- include('./partials/navbar') %> 
+
+    <div class="container content-container">
+        <h1 class="text-center mt-4 mb-4"><%= newsItem.title %></h1>
+
+        <!-- Imagem da Notícia -->
+        <div class="text-center mb-4">
+            <img src="<%= newsItem && newsItem.image ? 
+            (newsItem.image.startsWith('http') ? newsItem.image : '/images/carousel/' + newsItem.image) : '/images/carousel/default.jpg' %>"
+             alt="<%= newsItem ? newsItem.title : 'Imagem Padrão' %>" class="news-image">
+        </div>      
+
+        <!-- Conteúdo da Notícia -->
+        <article class="news-content">
+            <% let paragraphs = newsItem.content.split('\n'); %>
+            <% paragraphs.forEach(function(paragraph) { %>
+                <p><%= paragraph %></p>
+            <% }); %>
+        </article>
+
+        <!-- Seção de Comentários -->
+        <div class="container my-4">
+            <h3>📝 Deixe seu comentário</h3>
+            <textarea class="form-control my-2" id="commentInput" placeholder="Escreva algo..."></textarea>
+            <button class="btn btn-danger" id="submitComment">Comentar</button>
+            <ul class="list-group mt-3" id="commentsList"></ul>
+        </div>
+
+        <a href="/" class="btn-back">Voltar</a>
+    </div>
+
+    <script>
+        // Comentários
+        document.getElementById("submitComment").addEventListener("click", function () {
+            let commentText = document.getElementById("commentInput").value;
+            if (commentText.trim() !== "") {
+                let commentList = document.getElementById("commentsList");
+                let newComment = document.createElement("li");
+                newComment.className = "list-group-item";
+                newComment.innerText = commentText;
+                commentList.appendChild(newComment);
+                document.getElementById("commentInput").value = "";
+            }
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Notícias</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+
+<body>
+
+    <%- include('./partials/navbar') %>
+
+        <div class="container mt-4">
+            <h2>Cadastro de Notícias</h2>
+
+            <button class="btn btn-warning mb-3" onclick="abrirModal()">Novo</button>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Descrição Resumida</th>
+                            <th>Conteúdo</th>
+                            <th>Imagem</th>
+                            <th>Visualizações</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="newsTableBody">
+                        <!-- As notícias serão carregadas aqui -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Modal de Cadastro/Atualização -->
+        <div class="modal fade" id="newsModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Cadastro de Notícias</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="newsId">
+                        <div class="mb-3">
+                            <label class="form-label">Título</label>
+                            <input type="text" class="form-control" id="newsTitle">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Descrição Resumida</label>
+                            <input type="text" class="form-control" id="newsShortDescription">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Conteúdo</label>
+                            <textarea class="form-control" id="newsContent"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Imagem</label>
+
+                            <input type="file" class="form-control" id="newsImage" accept="image/*"
+                                onchange="previewImage()">
+
+                            <input type="text" class="form-control mt-2" id="newsImageName" readonly>
+
+                            <img id="newsImagePreview" src="" alt="Prévia da imagem" width="100"
+                                style="display:none; margin-top: 10px;">
+                        </div>
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                        <button class="btn btn-primary" onclick="salvarNoticia()">Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", carregarNoticias);
+        
+            function carregarNoticias() {
+                fetch('/news')
+                    .then(res => res.json())
+                    .then(noticias => {
+                        let tabela = document.getElementById("newsTableBody");
+                        tabela.innerHTML = "";
+        
+                        noticias.forEach(news => {
+                            let imageUrl = news.image && news.image.startsWith('http') 
+                                ? news.image 
+                                : `/images/${news.image || 'default.jpg'}`; // Usa imagem padrão caso não tenha uma
+        
+                            tabela.innerHTML += `
+                                <tr>
+                                    <td data-label="Título">${news.title}</td>
+                                    <td data-label="Descrição Resumida">${news.short_description}</td>
+                                    <td data-label="Conteúdo">${news.content}</td>
+                                    <td data-label="Imagem">
+                                        <img src="${imageUrl}" alt="Imagem" width="50">
+                                    </td>                          
+                                    <td data-label="Visualizações">${news.views}</td>
+                                    <td data-label="Ações">
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-secondary btn-sm" onclick="editarNoticia(${news.id})">Editar</button>
+                                            <button class="btn btn-danger btn-sm" onclick="deletarNoticia(${news.id})">Excluir</button>
+                                        </div>  
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    })
+                    .catch(error => console.error("❌ Erro ao carregar notícias:", error));
+            }
+        
+            function abrirModal(id = null) {
+                const modalElement = document.getElementById("newsModal");
+        
+                if (!modalElement) {
+                    console.error("❌ Erro: Modal não encontrado!");
+                    return;
+                }
+        
+                document.getElementById("newsId").value = id || "";
+                document.getElementById("newsTitle").value = "";
+                document.getElementById("newsShortDescription").value = "";
+                document.getElementById("newsContent").value = "";
+        
+                const imageInput = document.getElementById("newsImage");
+                const imagePreview = document.getElementById("newsImagePreview");
+                const imageNameField = document.getElementById("newsImageName");
+        
+                if (!id) {
+                    // 🚀 Se for novo cadastro, define a imagem padrão
+                    imageInput.value = "";
+                    imagePreview.src = "/images/default.jpg";
+                    imagePreview.style.display = "block";
+                    imageNameField.value = ""; // Limpa nome do arquivo
+                } else {
+                    imagePreview.style.display = "none"; 
+                    imageNameField.value = "";
+                }
+        
+                new bootstrap.Modal(modalElement).show();
+            }
+        
+            function salvarNoticia() {
+                const id = document.getElementById("newsId").value;
+                const title = document.getElementById("newsTitle").value;
+                const short_description = document.getElementById("newsShortDescription").value;
+                const content = document.getElementById("newsContent").value;
+                const imageInput = document.getElementById("newsImage");
+                const existingImage = document.getElementById("newsImageName").value; // Nome do arquivo salvo
+        
+                const formData = new FormData();
+                formData.append("title", title);
+                formData.append("short_description", short_description);
+                formData.append("content", content);
+        
+                // Se um novo arquivo for selecionado, substitui a imagem
+                if (imageInput.files.length > 0) {
+                    formData.append("image", imageInput.files[0]);
+                } else if (existingImage) {
+                    formData.append("image", existingImage); // Mantém a imagem antiga se não houver alteração
+                }
+        
+                const url = id ? `/news/${id}` : "/news";
+                const method = id ? "PUT" : "POST";
+        
+                fetch(url, {
+                    method,
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(() => {
+                    carregarNoticias();
+                    bootstrap.Modal.getInstance(document.getElementById("newsModal")).hide();
+                })
+                .catch(error => console.error("❌ Erro ao salvar notícia:", error));
+            }
+        
+            function editarNoticia(id) {
+                fetch(`/news/${id}`)
+                    .then(res => res.json())
+                    .then(noticia => {
+                        console.log("📢 Dados carregados para edição:", noticia);
+        
+                        document.getElementById("newsId").value = noticia.id;
+                        document.getElementById("newsTitle").value = noticia.title;
+                        document.getElementById("newsShortDescription").value = noticia.short_description;
+                        document.getElementById("newsContent").value = noticia.content;
+        
+                        const imagePreview = document.getElementById("newsImagePreview");
+                        const imageNameField = document.getElementById("newsImageName");
+        
+                        if (noticia.image) {
+                            imageNameField.value = noticia.image;
+                            imagePreview.src = `/images/${noticia.image}`;
+                            imagePreview.style.display = "block";
+                        } else {
+                            imageNameField.value = "";
+                            imagePreview.style.display = "none";
+                        }
+        
+                        new bootstrap.Modal(document.getElementById("newsModal")).show();
+                    })
+                    .catch(error => console.error("❌ Erro ao carregar notícia:", error));
+            }
+        
+            function deletarNoticia(id) {
+                if (confirm("Tem certeza que deseja excluir?")) {
+                    fetch(`/news/${id}`, { method: "DELETE" })
+                        .then(() => carregarNoticias())
+                        .catch(error => console.error("❌ Erro ao excluir notícia:", error));
+                }
+            }
+        
+            function previewImage() {
+                const imageInput = document.getElementById("newsImage");
+                const imagePreview = document.getElementById("newsImagePreview");
+        
+                if (imageInput.files.length > 0) {
+                    const file = imageInput.files[0];
+                    const reader = new FileReader();
+        
+                    reader.onload = function (e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = "block";
+                    };
+        
+                    reader.readAsDataURL(file);
+                } else {
+                    imagePreview.src = "/images/default.jpg";
+                }
+            }
+        </script>
+        
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
